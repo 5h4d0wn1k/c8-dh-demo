@@ -3,143 +3,68 @@
 > or hold explicit written authorization to assess**. Unauthorized use is
 > prohibited and may be illegal. Read [ETHICS.md](ETHICS.md) and
 > [SCOPE.md](SCOPE.md) before use. Use at your own risk; **AS IS**, no warranty.
-# C8 — Diffie-Hellman Demo
 
-Demonstrates the Diffie-Hellman key exchange, a man-in-the-middle attack, and parameter analysis.
+# C8 — Diffie-Hellman Key-Exchange Demo
 
-## Overview
+Interactive Diffie-Hellman crypto demo: RFC 3526 Group 14 (2048-bit) key exchange with SHA-256 session keys, a man-in-the-middle simulation, and DH parameter analysis — pure Python stdlib.
 
-This project implements and demonstrates:
-- Authenticated-style DH key exchange (RFC 3526 Group 14, 2048-bit)
-- Real key agreement using `pow` modular exponentiation
-- A man-in-the-middle attack demonstration
-- Parameter analysis (Miller-Rabin primality, safe-prime check, generator order)
-- A small-prime worked example for education
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/5h4d0wn1k/c8-dh-demo.svg)](https://github.com/5h4d0wn1k/c8-dh-demo)
+[![Last commit](https://img.shields.io/github/last-commit/5h4d0wn1k/c8-dh-demo.svg)](https://github.com/5h4d0wn1k/c8-dh-demo)
+[![Issues](https://img.shields.io/github/issues/5h4d0wn1k/c8-dh-demo.svg)](https://github.com/5h4d0wn1k/c8-dh-demo)
+
+## Why
+
+Diffie-Hellman is the foundation of secure key agreement — and its textbook images hide exactly where it fails: unbounded parameters and missing authentication. C8 makes both visible in code. It runs a real 2048-bit exchange (RFC 3526 Group 14), derives a SHA-256 session key, demonstrates how a MITM quietly negotiates separate keys with both parties, and analyzes a prime/generator pair (Miller–Rabin primality, safe-prime check, generator-order classification). A small-prime worked example makes every step followable by hand.
 
 ## Features
 
-- **Key exchange**: private/public key generation, shared secret derivation
-- **KDF**: SHA-256 session key derivation
-- **MITM demo**: shows how interception breaks key agreement
-- **Analysis**: prime/generator property checks with a statistical generator-order
-  classification (primitive root vs prime-order subgroup vs order-2)
-- **CSPRNG**: uses `secrets` for private keys
-- **CLI**: plain render, `--json`, `--output`, `--run`, custom `--p`/`--g`
+- **Real key exchange** — RFC 3526 Group 14 (2048-bit) via `pow` modular exponentiation, `secrets`-based private keys
+- **SHA-256 KDF** — deterministic session-key derivation from the shared secret
+- **MITM simulation** — shows Alice↔Mallory and Bob↔Mallory agreeing while Alice↔Bob never share a key
+- **Parameter analysis** — Miller–Rabin primality, safe-prime check, generator-order classification (primitive root / prime-order subgroup / order-2)
+- **Custom `--p` / `--g`** — analyze your own parameters, flag weak primes
+- **JSON output** — `--json --output` for scripting and labs
 
-## Installation
-
-```bash
-# No external dependencies required
-# Uses only Python standard library
-```
-
-## Usage
+## Quickstart
 
 ```bash
-# Run the full demo (writes a report, exit 0)
+# Full demo (writes a report, exit 0)
 python3 dh.py
 
 # JSON report to file
 python3 dh.py --json --output reports/dh.json
 
-# Classic text-mode key exchange
+# Classic text-mode exchange
 python3 dh.py --run
 
 # Analyze custom parameters
 python3 dh.py --p 23 --g 5
 
-# Use in code
+# Use as a library
 from dh import dh_exchange, mitm_demo, analyze_parameters
 report = dh_exchange()
-print(report['session_key'])
+
+# Unit tests (18)
+python3 -m unittest discover -s tests
 ```
 
-## Example Output
+## Project structure
 
-```
-=== Diffie-Hellman Demo ===
-RFC 3526 Group 14 (2048-bit) key exchange:
-  p bits: 2048, g: 2
-  Alice pub: ...557e2aeea178
-  Bob pub:   ...b8fd7d4f32be
-  shared secrets equal: True
-  session key (SHA-256): 5a0156b1...
+- `dh.py` — exchange, MITM demo, parameter analysis and CLI
+- `tests/` — 18 unit tests over the exchange, MITM and analysis paths
 
-=== Man-in-the-Middle ===
-  Alice & Mallory agree: True
-  Bob & Mallory agree:   True
-  Alice & Bob SAME key:  False
+## Documentation
 
-=== Parameter Analysis ===
-  p bits: 2048, probable prime: True, safe prime: True
-  generator g=2: True (g generates the prime-order subgroup (order q, 2047 bits))
-  smallest usable? p>=1024 bits: True
-```
+- [ETHICS.md](ETHICS.md) — educational purpose and authorized use only
+- [SCOPE.md](SCOPE.md) — authorized-testing scope checklist
+- [SECURITY.md](SECURITY.md) — vulnerability reporting
+- [CONTRIBUTING.md](CONTRIBUTING.md) — safe contribution guidelines
 
-Note: for RFC 3526 primes (which are `7 mod 8`), generator 2 is a quadratic
-residue, so it generates the prime-order subgroup of quadratic residues rather
-than the full group — the check reports this correctly and accepts it.
+## Contributing
 
-## Live Lab Test Plan
-
-| Step | Command | Expected result |
-|------|---------|-----------------|
-| 1 | `python3 dh.py` | exchange shown, `shared secrets equal: True`, exit 0 |
-| 2 | `python3 dh.py` (MITM section) | `Alice & Bob SAME key: False`, Mallory agrees with both |
-| 3 | `python3 dh.py` (analysis section) | p 2048 bits, probable prime True, safe prime True, generator ok |
-| 4 | `python3 dh.py --p 23 --g 5` | analysis flags small prime (`p>=1024 bits: False`) |
-| 5 | `python3 dh.py --json --output reports/dh.json` | valid JSON report |
-| 6 | `python3 dh.py --run` | classic text-mode exchange + SHA256 session key |
-| 7 | `python3 -m unittest discover -s tests` | 18 tests pass |
-
-## Metrics
-
-- 18 unit tests, all passing (`python3 -m unittest discover -s tests`).
-- RFC 3526 Group 14 prime verified as a 2048-bit probable prime and safe prime;
-  generator 2 validated as generating the prime-order subgroup (order q, 2047 bits).
-- MITM demo deterministically shows two independent agreement pairs
-  (Alice↔Mallory, Bob↔Mallory) while Alice/Bob never share a key.
-- Fully deterministic small-prime worked example (`p=23, g=5, a=6, b=15` → shared secret 2).
-- Pure standard-library implementation, no third-party packages.
-
-## Legal Disclaimer
-
-**IMPORTANT: Read before use.**
-
-This project is provided for **educational and authorized security testing purposes only**. 
-
-### Authorization Requirements
-- You MUST have explicit written permission from the network owner before using this tool
-- Unauthorized interception of network communications is illegal under federal and state laws
-- This tool should ONLY be used on networks you own or have written authorization to test
-
-### Legal Framework
-- **Computer Fraud and Abuse Act (CFAA)**: Unauthorized access to computer systems is a federal crime
-- **Wiretap Act (18 U.S.C. § 2511)**: Interception of electronic communications without consent is illegal
-- **State Laws**: Many states have additional computer crime and wiretapping statutes
-- **GDPR/CCPA**: Data collection may be subject to privacy regulations
-
-### Acceptable Use
-- Testing security of your own networks
-- Authorized penetration testing with written scope
-- Academic research in controlled lab environments
-- Security education and training
-
-### Prohibited Use
-- Intercepting communications on networks you do not own
-- Attacking infrastructure without authorization
-- Any activity that violates applicable laws or regulations
-- Commercial use without proper licensing
-
-### No Warranty
-This software is provided "AS IS" without warranty of any kind. The author is not responsible for any misuse or damage caused by this software.
-
-### Responsible Disclosure
-If you discover vulnerabilities using this tool, follow responsible disclosure practices:
-1. Report to the vendor/owner privately
-2. Allow reasonable time for remediation
-3. Do not exploit beyond proof of concept
+New attacks, parameter checks and test vectors are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md); the demo must stay offline and educational.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Provided **AS IS**, without warranty, for education and authorized crypto research only.
